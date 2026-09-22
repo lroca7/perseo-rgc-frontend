@@ -70,13 +70,14 @@ function NuevoPrestamoForm({ socios, onDone }: { socios: Socio[]; onDone: () => 
   const [tasa, setTasa] = useState('5')
   const [numCuotas, setNumCuotas] = useState('18')
   const [fechaInicio, setFechaInicio] = useState(todayISO())
+  const [aplicarGracia, setAplicarGracia] = useState(true)
   const toast = useToast()
 
   const guardar = async () => {
     const m = Number(monto), t = Number(tasa) / 100, n = Number(numCuotas)
     if (!m || m <= 0) { toast.show('Ingresa un monto válido.'); return }
     if (!n || n <= 0) { toast.show('Ingresa un número de cuotas válido.'); return }
-    await api.prestamos.crear({ socioId, monto: m, tasa: t, numCuotas: n, fechaInicio })
+    await api.prestamos.crear({ socioId, monto: m, tasa: t, numCuotas: n, fechaInicio, aplicarGraciaDiciembre: aplicarGracia })
     onDone()
   }
 
@@ -96,7 +97,11 @@ function NuevoPrestamoForm({ socios, onDone }: { socios: Socio[]; onDone: () => 
         <div><label>N° de cuotas</label><input type="number" value={numCuotas} onChange={(e) => setNumCuotas(e.target.value)} /></div>
         <div><label>Fecha de inicio</label><input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} /></div>
       </div>
-      <div className="hint">La cuota fija y la tabla de amortización se generan automáticamente (método francés).</div>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <input type="checkbox" style={{ width: 'auto' }} checked={aplicarGracia} onChange={(e) => setAplicarGracia(e.target.checked)} />
+        Aplicar mes de gracia en diciembre (no se cobra cuota ni interés ese mes)
+      </label>
+      <div className="hint">La cuota fija y la tabla de amortización se generan automáticamente (método francés). Las {numCuotas} cuotas son las que realmente cobran; si el préstamo atraviesa uno o más diciembres, el calendario se alarga por esos meses de gracia.</div>
       <div style={{ marginTop: 14 }}><button className="btn" onClick={guardar}>Crear préstamo</button></div>
     </>
   )
@@ -125,6 +130,17 @@ function PrestamoDetalle({ id }: { id: string }) {
     return idx === 0 ? prestamo.monto : prestamo.cuotas[idx - 1].saldo
   }
   const pendienteN = prestamo.cuotas.findIndex((c) => !c.pagado)
+  const tieneTabla = prestamo.cuotas.length > 0
+
+  const eliminarTabla = async () => {
+    if (!confirm('¿Eliminar la tabla de amortización de este préstamo? Podrás generar una nueva desde cero.')) return
+    try {
+      await api.prestamos.eliminarTabla(prestamo.id)
+      cargar(); toast.show('Tabla de amortización eliminada.')
+    } catch (e) {
+      toast.show(e instanceof Error ? e.message : 'No se pudo eliminar la tabla.')
+    }
+  }
 
   return (
     <>
@@ -132,7 +148,8 @@ function PrestamoDetalle({ id }: { id: string }) {
       <div className="topbar">
         <div><h1>Préstamo de {nombreDe(prestamo.socioId)}</h1><div className="date">{fmt(prestamo.monto)} · tasa {fmtPct(prestamo.tasa)} mensual · inicio {prestamo.fechaInicio}</div></div>
         <div className="row-actions">
-          {prestamo.cuotas.length === 0 && <button className="btn secondary small" onClick={() => setShowRefi(true)}>Generar tabla de amortización</button>}
+          <button className="btn secondary small" onClick={() => setShowRefi(true)}>{tieneTabla ? 'Editar / regenerar tabla' : 'Generar tabla de amortización'}</button>
+          {tieneTabla && <button className="btn secondary small" onClick={eliminarTabla}>Eliminar tabla</button>}
           <button className="btn danger small" onClick={async () => {
             if (!confirm('¿Eliminar este préstamo por completo?')) return
             await api.prestamos.eliminar(prestamo.id); navigate('/prestamos')
@@ -143,7 +160,7 @@ function PrestamoDetalle({ id }: { id: string }) {
         <Stat label="Saldo pendiente" value={fmt(saldoPendiente())} />
         <Stat label="Estado" value={prestamo.estado === 'pagado' ? 'Pagado' : 'Activo'} />
       </div>
-      {prestamo.cuotas.length > 0 ? (
+      {tieneTabla ? (
         <div className="card">
           <h2>Tabla de amortización</h2>
           <div className="tbl-wrap">
@@ -151,10 +168,13 @@ function PrestamoDetalle({ id }: { id: string }) {
               <thead><tr><th>Cuota</th><th>Fecha</th><th className="num">Valor cuota</th><th className="num">Interés</th><th className="num">Capital</th><th className="num">Saldo</th><th>Estado</th><th></th></tr></thead>
               <tbody>
                 {prestamo.cuotas.map((c, idx) => (
-                  <tr key={c.numero}>
+                  <tr key={c.numero} style={c.esGracia ? { opacity: 0.7 } : undefined}>
                     <td>{c.numero}</td><td>{c.fechaProgramada}</td>
                     <td className="num">{fmt(c.cuota)}</td><td className="num">{fmt(c.interes)}</td><td className="num">{fmt(c.capital)}</td><td className="num">{fmt(c.saldo)}</td>
-                    <td><Pill kind={c.pagado ? 'pos' : 'warn'}>{c.pagado ? `Pagada ${c.fechaPago || ''}` : 'Pendiente'}</Pill></td>
+                    <td>{c.esGracia
+                      ? <Pill kind="warn">Mes de gracia</Pill>
+                      : <Pill kind={c.pagado ? 'pos' : 'warn'}>{c.pagado ? `Pagada ${c.fechaPago || ''}` : 'Pendiente'}</Pill>}
+                    </td>
                     <td>{!c.pagado && idx === pendienteN && <button className="btn small" onClick={() => setPagarIdx(idx)}>Registrar pago</button>}</td>
                   </tr>
                 ))}
@@ -167,7 +187,7 @@ function PrestamoDetalle({ id }: { id: string }) {
       )}
       {showRefi && (
         <Modal onClose={() => setShowRefi(false)}>
-          <GenerarTablaForm prestamo={prestamo} onDone={() => { setShowRefi(false); cargar(); toast.show('Tabla de amortización generada.') }} />
+          <GenerarTablaForm prestamo={prestamo} onDone={() => { setShowRefi(false); cargar(); toast.show('Tabla de amortización generada.') }} onError={(m) => toast.show(m)} />
         </Modal>
       )}
       {pagarIdx !== null && (
@@ -179,24 +199,42 @@ function PrestamoDetalle({ id }: { id: string }) {
   )
 }
 
-function GenerarTablaForm({ prestamo, onDone }: { prestamo: Prestamo; onDone: () => void }) {
+function GenerarTablaForm({ prestamo, onDone, onError }: { prestamo: Prestamo; onDone: () => void; onError: (msg: string) => void }) {
   const [tasa, setTasa] = useState(String(prestamo.tasa * 100))
-  const [numCuotas, setNumCuotas] = useState('18')
+  const [numCuotas, setNumCuotas] = useState(String(prestamo.numCuotas || 18))
   const [fechaInicio, setFechaInicio] = useState(todayISO())
+  const [aplicarGracia, setAplicarGracia] = useState(true)
+  const tieneTabla = prestamo.cuotas.length > 0
+
   const guardar = async () => {
-    await api.prestamos.generarTabla(prestamo.id, { tasa: Number(tasa) / 100, numCuotas: Number(numCuotas), fechaInicio })
-    onDone()
+    try {
+      await api.prestamos.generarTabla(prestamo.id, {
+        tasa: Number(tasa) / 100, numCuotas: Number(numCuotas), fechaInicio, aplicarGraciaDiciembre: aplicarGracia,
+      })
+      onDone()
+    } catch (e) {
+      onError(e instanceof Error ? e.message : 'No se pudo generar la tabla.')
+    }
   }
+
   return (
     <>
-      <h2>Generar tabla de amortización</h2>
-      <div className="section-desc">Para el saldo actual pendiente: {fmt(prestamo.monto)}</div>
+      <h2>{tieneTabla ? 'Editar / regenerar tabla de amortización' : 'Generar tabla de amortización'}</h2>
+      <div className="section-desc">
+        {tieneTabla
+          ? 'Esto recalcula toda la tabla desde el saldo pendiente actual. Solo funciona si aún no hay cuotas reales pagadas.'
+          : `Para el saldo actual pendiente: ${fmt(prestamo.monto)}`}
+      </div>
       <div className="form-grid">
         <div><label>Tasa mensual (%)</label><input type="number" step="0.01" value={tasa} onChange={(e) => setTasa(e.target.value)} /></div>
         <div><label>N° de cuotas</label><input type="number" value={numCuotas} onChange={(e) => setNumCuotas(e.target.value)} /></div>
         <div><label>Fecha de inicio</label><input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} /></div>
       </div>
-      <button className="btn" onClick={guardar}>Generar</button>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <input type="checkbox" style={{ width: 'auto' }} checked={aplicarGracia} onChange={(e) => setAplicarGracia(e.target.checked)} />
+        Aplicar mes de gracia en diciembre
+      </label>
+      <button className="btn" onClick={guardar}>{tieneTabla ? 'Regenerar' : 'Generar'}</button>
     </>
   )
 }

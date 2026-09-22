@@ -36,7 +36,16 @@ async function req<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers: { 'Content-Type': 'application/json' },
     ...options,
   })
-  if (!res.ok) throw new Error(`Error ${res.status} en ${path}`)
+  if (!res.ok) {
+    let message = `Error ${res.status} en ${path}`
+    try {
+      const body = await res.json()
+      if (body?.error) message = body.error
+    } catch {
+      // respuesta sin cuerpo JSON, se deja el mensaje genérico
+    }
+    throw new Error(message)
+  }
   if (res.status === 204) return undefined as T
   return res.json()
 }
@@ -57,10 +66,11 @@ export const api = {
   prestamos: {
     listar: (socioId?: string) => req<Prestamo[]>(`/prestamos${socioId ? `?socioId=${socioId}` : ''}`),
     obtener: (id: string) => req<Prestamo>(`/prestamos/${id}`),
-    crear: (data: { socioId: string; monto: number; tasa: number; numCuotas: number; fechaInicio: string }) =>
+    crear: (data: { socioId: string; monto: number; tasa: number; numCuotas: number; fechaInicio: string; aplicarGraciaDiciembre: boolean }) =>
       req<Prestamo>('/prestamos', { method: 'POST', body: JSON.stringify(data) }),
-    generarTabla: (id: string, data: { tasa: number; numCuotas: number; fechaInicio: string }) =>
+    generarTabla: (id: string, data: { tasa: number; numCuotas: number; fechaInicio: string; aplicarGraciaDiciembre: boolean }) =>
       req<Prestamo>(`/prestamos/${id}/generar-tabla`, { method: 'POST', body: JSON.stringify(data) }),
+    eliminarTabla: (id: string) => req<Prestamo>(`/prestamos/${id}/tabla`, { method: 'DELETE' }),
     pagarCuota: (id: string, numero: number, data: { fechaPago: string; montoPagado: number }) =>
       req<Prestamo>(`/prestamos/${id}/cuotas/${numero}/pagar`, { method: 'POST', body: JSON.stringify(data) }),
     eliminar: (id: string) => req<void>(`/prestamos/${id}`, { method: 'DELETE' }),
