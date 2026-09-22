@@ -1,0 +1,1 @@
+{"root":["./src/App.tsx","./src/main.tsx","./src/api/client.ts","./src/components/Shared.tsx","./src/lib/format.ts","./src/pages/Aportes.tsx","./src/pages/Config.tsx","./src/pages/Gastos.tsx","./src/pages/Prestamos.tsx","./src/pages/Proyeccion.tsx","./src/pages/Resumen.tsx","./src/pages/Socios.tsx","./src/pages/Utilidades.tsx"],"errors":true,"version":"6.0.3"}
