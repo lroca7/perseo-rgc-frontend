@@ -1,8 +1,8 @@
 export function fmt(n: number | undefined | null): string {
   const v = Number(n) || 0
-  const neg = v < -0.5
-  const abs = Math.round(Math.abs(v))
-  const s = '$' + abs.toLocaleString('es-CO')
+  const neg = v < -0.005
+  const abs = Math.abs(v)
+  const s = '$' + abs.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   return neg ? `(${s})` : s
 }
 

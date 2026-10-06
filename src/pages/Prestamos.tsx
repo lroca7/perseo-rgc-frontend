@@ -92,7 +92,7 @@ function NuevoPrestamoForm({ socios, onDone }: { socios: Socio[]; onDone: () => 
             {socios.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
           </select>
         </div>
-        <div><label>Monto</label><input type="number" placeholder="6000000" value={monto} onChange={(e) => setMonto(e.target.value)} /></div>
+        <div><label>Monto</label><input type="number" step="0.01" placeholder="6000000" value={monto} onChange={(e) => setMonto(e.target.value)} /></div>
         <div><label>Tasa de interés mensual (%)</label><input type="number" step="0.01" value={tasa} onChange={(e) => setTasa(e.target.value)} /></div>
         <div><label>N° de cuotas</label><input type="number" value={numCuotas} onChange={(e) => setNumCuotas(e.target.value)} /></div>
         <div><label>Fecha de inicio</label><input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} /></div>
@@ -253,7 +253,7 @@ function PagarCuotaForm({ prestamo, idx, onDone }: { prestamo: Prestamo; idx: nu
       <div className="section-desc">Programada: {fmt(c.cuota)} (interés {fmt(c.interes)} + capital {fmt(c.capital)})</div>
       <div className="form-grid">
         <div><label>Fecha de pago</label><input type="date" value={fechaPago} onChange={(e) => setFechaPago(e.target.value)} /></div>
-        <div><label>Monto pagado</label><input type="number" value={monto} onChange={(e) => setMonto(e.target.value)} /></div>
+        <div><label>Monto pagado</label><input type="number" step="0.01" value={monto} onChange={(e) => setMonto(e.target.value)} /></div>
       </div>
       <button className="btn" onClick={guardar}>Confirmar pago</button>
     </>

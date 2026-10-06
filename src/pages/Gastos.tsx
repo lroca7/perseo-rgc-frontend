@@ -71,7 +71,7 @@ function NuevoGastoForm({ onDone }: { onDone: () => void }) {
         <div><label>Concepto</label><input value={concepto} onChange={(e) => setConcepto(e.target.value)} placeholder="Ej: atención asamblea" /></div>
         <div><label>Periodo</label><input type="month" value={periodo} onChange={(e) => setPeriodo(e.target.value)} /></div>
         <div><label>Fecha</label><input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} /></div>
-        <div><label>Monto</label><input type="number" placeholder="115299" value={monto} onChange={(e) => setMonto(e.target.value)} /></div>
+        <div><label>Monto</label><input type="number" step="0.01" placeholder="115299" value={monto} onChange={(e) => setMonto(e.target.value)} /></div>
       </div>
       <button className="btn" onClick={guardar}>Guardar</button>
     </>

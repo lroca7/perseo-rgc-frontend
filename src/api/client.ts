@@ -16,7 +16,7 @@ export type Utilidad = {
   id: string; periodo: string; totalIntereses: number; totalGastos: number
   utilidadNeta: number; distribucion: DistribucionItem[]; fecha: string
 }
-export type ConfigGlobal = { id: string; tasaDefault: number; ultimaLiquidacion: string | null }
+export type ConfigGlobal = { id: string; tasaDefault: number; ultimaLiquidacion: string | null; ajusteBancos: number }
 export type SocioSaldo = {
   socioId: string; nombre: string; activo: boolean; aportes: number
   prestamoPendiente: number; utilidadRecibida: number; saldoNeto: number
@@ -90,7 +90,8 @@ export const api = {
   },
   config: {
     obtener: () => req<ConfigGlobal>('/config'),
-    actualizar: (tasaDefault: number) => req<ConfigGlobal>('/config', { method: 'PUT', body: JSON.stringify({ tasaDefault }) }),
+    actualizar: (data: { tasaDefault: number; ajusteBancos: number }) =>
+      req<ConfigGlobal>('/config', { method: 'PUT', body: JSON.stringify(data) }),
   },
   resumen: {
     obtener: () => req<Resumen>('/resumen'),

@@ -81,7 +81,7 @@ function NuevoAporteForm({ socios, onDone }: { socios: Socio[]; onDone: () => vo
         </div>
         <div><label>Periodo</label><input type="month" value={periodo} onChange={(e) => setPeriodo(e.target.value)} /></div>
         <div><label>Fecha</label><input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} /></div>
-        <div><label>Monto</label><input type="number" placeholder="200000" value={monto} onChange={(e) => setMonto(e.target.value)} /></div>
+        <div><label>Monto</label><input type="number" step="0.01" placeholder="200000" value={monto} onChange={(e) => setMonto(e.target.value)} /></div>
       </div>
       <label>Nota (opcional)</label>
       <input value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Ej: consignación banco" />
