@@ -8,6 +8,7 @@ import Gastos from './pages/Gastos'
 import Utilidades from './pages/Utilidades'
 import Proyeccion from './pages/Proyeccion'
 import Config from './pages/Config'
+import CapacidadPrestamos from './pages/CapacidadPrestamos'
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
               <Route path="/gastos" element={<Gastos />} />
               <Route path="/utilidades" element={<Utilidades />} />
               <Route path="/proyeccion" element={<Proyeccion />} />
+              <Route path="/capacidad-prestamos" element={<CapacidadPrestamos />} />
               <Route path="/config" element={<Config />} />
             </Routes>
           </div>

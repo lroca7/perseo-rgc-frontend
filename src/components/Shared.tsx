@@ -9,6 +9,7 @@ const NAV = [
   { to: '/gastos', label: 'Gastos', icon: '▽' },
   { to: '/utilidades', label: 'Utilidades', icon: '✦' },
   { to: '/proyeccion', label: 'Proyección', icon: '↗' },
+  { to: '/capacidad-prestamos', label: 'Capacidad préstamos', icon: '💰' },
   { to: '/config', label: 'Configuración', icon: '⚙' },
 ]
 

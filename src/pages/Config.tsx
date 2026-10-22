@@ -10,15 +10,34 @@ export default function Config() {
   const [ajuste, setAjuste] = useState('0')
   const [bancosObjetivo, setBancosObjetivo] = useState('')
   const [utilidadObjetivo, setUtilidadObjetivo] = useState('')
+  const [aporteMensual, setAporteMensual] = useState('200000')
+  const [usarUltimoAporteReal, setUsarUltimoAporteReal] = useState(false)
+  const [numCuotasSimulacion, setNumCuotasSimulacion] = useState('18')
+  const [prestamosParciales, setPrestamosParciales] = useState(false)
   const toast = useToast()
 
   useEffect(() => {
-    api.config.obtener().then((c) => { setConfig(c); setTasa(String(c.tasaDefault * 100)); setAjuste(String(c.ajusteInteresesHistoricos)) })
+    api.config.obtener().then((c) => {
+      setConfig(c)
+      setTasa(String(c.tasaDefault * 100))
+      setAjuste(String(c.ajusteInteresesHistoricos))
+      setAporteMensual(String(c.aporteMensualSocio ?? 200000))
+      setUsarUltimoAporteReal(!!c.usarUltimoAporteReal)
+      setNumCuotasSimulacion(String(c.numCuotasSimulacion ?? 18))
+      setPrestamosParciales(!!c.prestamosParciales)
+    })
     api.resumen.obtener().then(setResumen)
   }, [])
 
   const guardar = async () => {
-    const c = await api.config.actualizar({ tasaDefault: Number(tasa) / 100, ajusteInteresesHistoricos: Number(ajuste) || 0 })
+    const c = await api.config.actualizar({
+      tasaDefault: Number(tasa) / 100,
+      ajusteInteresesHistoricos: Number(ajuste) || 0,
+      aporteMensualSocio: Number(aporteMensual) || 0,
+      usarUltimoAporteReal,
+      numCuotasSimulacion: Math.max(1, Number(numCuotasSimulacion) || 18),
+      prestamosParciales,
+    })
     setConfig(c)
     api.resumen.obtener().then(setResumen)
     toast.show('Configuración guardada.')
@@ -97,6 +116,69 @@ export default function Config() {
             {sinGuardar && <span style={{ color: 'var(--gold)' }}> — dale Guardar para que quede así</span>}
           </div>
         )}
+        <button className="btn" onClick={guardar}>Guardar</button>
+      </div>
+      <div className="card">
+        <h2>Simulación de capacidad de préstamos</h2>
+        <div className="section-desc">
+          Parámetros que usa la pantalla <strong>Capacidad préstamos</strong> para proyectar el fondo mes a mes.
+        </div>
+
+        <h3>Aporte mensual por socio</h3>
+        <div className="section-desc">
+          Es lo que se asume que cada socio activo sigue pagando cada mes (diciembre no cuenta). La simulación
+          proyecta ese aporte mes a mes desde el último período con aportes registrados hasta el mes en que cada
+          socio alcanza su turno.
+        </div>
+        <div className="form-grid" style={{ maxWidth: 260 }}>
+          <div>
+            <label>Aporte mensual ($)</label>
+            <input type="number" step="1000" value={aporteMensual} onChange={(e) => setAporteMensual(e.target.value)} />
+          </div>
+        </div>
+
+        <h3>Usar el último aporte real de cada socio</h3>
+        <div className="section-desc">
+          Por defecto la simulación supone que todos aportan lo mismo. Si se activa, cada socio proyecta <strong>su
+          último aporte registrado</strong> (por ejemplo, quien aporta $450.000 en vez de $200.000), que es más fiel a
+          la realidad del fondo.
+        </div>
+        <div className="form-grid" style={{ maxWidth: 260 }}>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input type="checkbox" style={{ width: 'auto' }} checked={usarUltimoAporteReal} onChange={(e) => setUsarUltimoAporteReal(e.target.checked)} />
+            <span>Proyectar el último aporte real de cada socio</span>
+          </label>
+        </div>
+
+        <h3>Cuotas del préstamo simulado</h3>
+        <div className="section-desc">
+          Número de cuotas del préstamo nuevo que se simula (a la tasa por defecto). Define en cuántos meses ese
+          préstamo devuelve capital e interés al fondo. Los meses de diciembre se saltan.
+        </div>
+        <div className="form-grid" style={{ maxWidth: 260 }}>
+          <div>
+            <label>Número de cuotas</label>
+            <input type="number" step="1" min="1" value={numCuotasSimulacion} onChange={(e) => setNumCuotasSimulacion(e.target.value)} />
+          </div>
+        </div>
+
+        <h3>Préstamos parciales</h3>
+        <div className="section-desc">
+          Por defecto el fondo otorga el <strong>cupo completo</strong> del socio o no otorga nada: si la caja no
+          alcanza, el turno se corre hasta que alcance. Con esta opción el fondo otorga en el mes de turno
+          <strong> lo que puede</strong> (el menor entre el cupo del socio y la caja disponible).
+          <ul style={{ margin: '8px 0 0', paddingLeft: 18, lineHeight: 1.7 }}>
+            <li><strong>Desactivado:</strong> Todos los turnos se atienden en su mes pero cada socio recibe entre el 41% y el 84% de su capacidad — el fondo rota mucho más rápido.</li>
+            <li><strong>Activado:</strong> Cada socio recibe su cupo completo, pero el último turno se va muchos meses después (con los datos de hoy, mayo 2028).</li>
+          </ul>
+        </div>
+        <div className="form-grid" style={{ maxWidth: 320 }}>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input type="checkbox" style={{ width: 'auto' }} checked={prestamosParciales} onChange={(e) => setPrestamosParciales(e.target.checked)} />
+            <span>Otorgar en el mes de turno solo lo que el fondo puede</span>
+          </label>
+        </div>
+
         <button className="btn" onClick={guardar}>Guardar</button>
       </div>
       <div className="card">

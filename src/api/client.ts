@@ -16,7 +16,48 @@ export type Utilidad = {
   id: string; periodo: string; totalIntereses: number; totalGastos: number
   utilidadNeta: number; distribucion: DistribucionItem[]; fecha: string
 }
-export type ConfigGlobal = { id: string; tasaDefault: number; ultimaLiquidacion: string | null; ajusteInteresesHistoricos: number }
+export type ConfigGlobal = {
+  id: string
+  tasaDefault: number
+  ultimaLiquidacion: string | null
+  ajusteInteresesHistoricos: number
+  aporteMensualSocio: number
+  usarUltimoAporteReal: boolean
+  numCuotasSimulacion: number
+  prestamosParciales: boolean
+}
+/** Un mes de la proyección de la caja del fondo. */
+export type FondoMesItem = {
+  periodo: string
+  fondoInicial: number
+  aportes: number            // 0 en diciembre
+  cobros: number             // cuotas cobradas (capital + interés)
+  utilidadDevengada: number  // interés acumulado en el mes
+  utilidadAPagar: number     // utilidad que sale del fondo (0 si no es mes de cierre)
+  utilidadSinRepartir: number
+  desembolsos: number
+  fondoFinal: number
+  cajaDisponible: number
+  esLiquidacion: boolean
+  esGracia: boolean
+}
+
+/** Una liquidación de utilidad proyectada (junio y diciembre). */
+export type LiquidacionItem = {
+  periodo: string
+  utilidad: number
+  cajaAntes: number
+  cajaDespues: number
+  cubierta: boolean          // false = no había caja, se pospone
+}
+
+export type FondoProyeccion = {
+  anclaPeriodo: string
+  meses: FondoMesItem[]
+  liquidaciones: LiquidacionItem[]
+  proximaLiquidacion: LiquidacionItem | null
+}
+
 export type SocioSaldo = {
   socioId: string; nombre: string; activo: boolean; aportes: number
   prestamoPendiente: number; utilidadRecibida: number; saldoNeto: number
@@ -30,6 +71,34 @@ export type UtilidadPeriodo = {
   distribucion: DistribucionItem[]; yaLiquidado: boolean
 }
 export type ProyeccionMes = { periodo: string; interesesMes: number; utilidadMes: number; acumUtilidad: number; acumAportes: number }
+export type CapacidadPrestamoItem = {
+  socioId: string; nombre: string; turno: number
+  mesTurno: string            // mes calendario del turno (un socio por mes)
+  anclaPeriodo: string        // período base de la proyección (último con aportes)
+  mesesProyectados: number    // nº de meses con aporte (sin diciembre) desde el ancla
+  aportes: number             // aportes acumulados hoy
+  aportesProyectados: number  // aportes acumulados en el mes de otorgamiento
+  capacidadMax: number        // 2 x aportesProyectados
+  prestamoActivoSaldo: number              // saldo del préstamo viejo hoy
+  prestamoActivoSaldoProyectado: number    // saldo del préstamo viejo en el mes de otorgamiento
+  disponible: number                        // cupo completo en el mes de otorgamiento
+  fondoProyectadoTurno: number   // caja del fondo en el mes calendario del turno
+  cajaDisponible: number         // caja menos utilidad acumulada sin repartir
+  // --- panorama en el mes calendario del turno ---
+  disponibleEnTurno: number      // lo que le correspondía al socio ese mes
+  cajaDisponibleEnTurno: number  // caja que el fondo tenía ese mes
+  prestamoIdealEnTurno: number   // el menor de los dos: lo que el fondo podía prestarle
+  brechaEnTurno: number          // lo que le faltó para el cupo completo
+  aportesProyectadosEnTurno: number
+  capacidadMaxEnTurno: number
+  prestamoActivoSaldoProyectadoEnTurno: number
+  // --- resultado ---
+  montoOtorgado: number          // monto final del préstamo otorgado
+  prestamoParcial: boolean       // se otorgó menos que su cupo completo
+  alcanzaFondo: boolean
+  mesesExtra: number
+  mesAlcance: string | null       // mes real en que se otorga el préstamo
+}
 
 async function req<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
@@ -88,10 +157,20 @@ export const api = {
   proyeccion: {
     obtener: (meses: number, aporteExtra: number) => req<ProyeccionMes[]>(`/proyeccion?meses=${meses}&aporteExtra=${aporteExtra}`),
   },
+  capacidadPrestamos: {
+    listar: () => req<CapacidadPrestamoItem[]>('/capacidad-prestamos'),
+    fondo: () => req<FondoProyeccion>('/capacidad-prestamos/fondo'),
+  },
   config: {
     obtener: () => req<ConfigGlobal>('/config'),
-    actualizar: (data: { tasaDefault: number; ajusteInteresesHistoricos: number }) =>
-      req<ConfigGlobal>('/config', { method: 'PUT', body: JSON.stringify(data) }),
+    actualizar: (data: {
+      tasaDefault: number
+      ajusteInteresesHistoricos: number
+      aporteMensualSocio: number
+      usarUltimoAporteReal: boolean
+      numCuotasSimulacion: number
+      prestamosParciales: boolean
+    }) => req<ConfigGlobal>('/config', { method: 'PUT', body: JSON.stringify(data) }),
   },
   resumen: {
     obtener: () => req<Resumen>('/resumen'),

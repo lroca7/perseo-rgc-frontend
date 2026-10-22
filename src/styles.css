@@ -75,3 +75,11 @@ input:focus,select:focus{outline:2px solid var(--green);outline-offset:1px;}
   .nav{flex-direction:row;flex-wrap:wrap;}
   .main{padding:20px 16px 40px 16px;}
 }
+
+
+/* --- Helpers de color y peso --- */
+.strong{font-weight:700;}
+.pos{color:var(--green);}
+.neg{color:var(--brick);}
+.gold{color:var(--gold);}
+

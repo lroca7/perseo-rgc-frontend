@@ -5,6 +5,11 @@ node_modules/
 dist/
 dist-ssr/
 
+# Artefactos generados por `tsc -b` (tsconfig.node.json es composite)
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+
 # PWA generated files
 dev-dist/
 
